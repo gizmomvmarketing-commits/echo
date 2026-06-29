@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gizmo Shop - Monitors</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+    /* Accent overrides for Monitors Page */
+    :root {
+        --accent-color: #06b6d4; /* Premium Cyan / Teal */
+    }
+    
+    /* 1. Turn both Category Titles and Key Specs headers CYAN */
+    .tier-title,
+    #tiered-container .specs-header-title {
+        color: #06b6d4 !important;
+        border-left-color: #06b6d4 !important; /* Focus vertical bar */
+    }
+    
+    /* 2. Turn Small Card Tags CYAN */
+    #tiered-container .brand-label {
+        color: #06b6d4 !important;
+    }
+    
+    /* 3. FORCE the price tags to stay RED universally */
+    #tiered-container .computer-price-block div, 
+    #tiered-container .computer-price-block span {
+        color: #e94560 !important;
+    }
+    
+    /* Keep modal badge cyan for monitor pop-ups */
+    .modal-tier-badge { 
+        color: #06b6d4 !important; 
+    }
+</style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">GIZMO SHOP</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="aspect.html">Aspect</a>
+            <a href="gaming.html">Gaming</a>
+            <a href="workstation.html">Workstation</a>
+            <a href="monitors.html" class="active">Monitors</a>
+            <a href="laptops.html">Laptops</a>
+            <a href="tablets.html">Tablets</a>
+            <a href="products.html">Other Products</a>
+        </div>
+    </nav>
+  
+    <main id="tiered-container" style="padding-top: 20px;"></main>
+
+    <div id="product-modal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeModal(event)">&times;</button>
+            <div class="modal-body">
+                </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <script src="loader.js"></script>
+    
+    <script>
+        loadTieredComputers("monitors");
+    </script>
+</body>
+</html>

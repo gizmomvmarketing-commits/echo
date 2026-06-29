@@ -1,0 +1,768 @@
+// Helper function to check if a row is available
+function isProductAvailable(row) {
+    const val = String(row.available || '').toLowerCase().trim();
+    return val === 'true';
+}
+
+// Master Excel Tab Parser with Debugger
+function getExcelSheetData(sheetName, callback) {
+    const mainContainer = document.getElementById('tiered-container') || document.getElementById('product-container');
+    
+    if (typeof XLSX === 'undefined') {
+        if (mainContainer) {
+            mainContainer.innerHTML = `
+                <div style="padding: 30px; text-align: center; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; max-width: 800px; margin: 40px auto;">
+                    <h3>🚨 Missing SheetJS Library</h3>
+                    <p>The code cannot read Excel files because the XLSX script library is missing or blocked in your HTML file.</p>
+                </div>`;
+        }
+        console.error("XLSX library is not defined.");
+        return;
+    }
+
+    fetch('products.xlsx')
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`Could not find your Excel file. Make sure it is named exactly "products.xlsx" and is in the same folder as your HTML files.`);
+            }
+            return res.arrayBuffer();
+        })
+        .then(buffer => {
+            const data = new Uint8Array(buffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            const worksheet = workbook.Sheets[sheetName];
+            
+            if (!worksheet) {
+                throw new Error(`The tab named "${sheetName}" does not exist inside products.xlsx. Check your spelling at the bottom of Excel!`);
+            }
+            
+            const jsonRows = XLSX.utils.sheet_to_json(worksheet);
+            
+            // --- FIX: Filter data here BEFORE the callback ---
+            const availableRows = jsonRows.filter(row => isProductAvailable(row));
+            
+            // Log what we found for debugging
+            console.log(`Found ${jsonRows.length} total rows in ${sheetName}.`);
+            console.log(`Filtering to ${availableRows.length} available products.`);
+            
+            callback(availableRows);
+        })
+        .catch(err => {
+            if (mainContainer) {
+                mainContainer.innerHTML = `
+                    <div style="padding: 30px; text-align: left; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; max-width: 800px; margin: 40px auto;">
+                        <h3 style="margin-bottom:10px;">❌ Error Loading Database</h3>
+                        <p style="font-family: monospace; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 4px;">${err.message}</p>
+                    </div>`;
+            }
+            console.error("Database initialization error:", err);
+        });
+}
+
+
+
+// 1. Computers (Aspect, Gaming, Workstations)
+function loadComputers(categoryName) {
+    getExcelSheetData('computers', data => {
+        const container = document.getElementById('product-container');
+        const filtered = data.filter(p => p.category === categoryName);
+        container.innerHTML = filtered.map(p => createComputerCard(p)).join('');
+    });
+}
+
+function createComputerCard(p) {
+    function renderRow(label, value) {
+        if (!value || String(value).trim() === "" || String(value).trim() === "-") return "";
+        return `<tr><td class="label">${label}:</td><td>${value}</td></tr>`;
+    }
+
+    function formatMVR(priceValue) {
+        const num = parseFloat(priceValue);
+        if (!num || isNaN(num)) return null;
+        return `MVR ${num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    }
+
+    // Clean up code formatting (strips any existing '#' symbols to prevent duplicates)
+    const rawCode = p.code ? String(p.code).replace(/#/g, '').trim() : '';
+    const pcPriceFormatted = formatMVR(p.pc_price);
+
+    // Dynamic Storage Formatting Layout Logic with Line Breaks
+    let storageDisplay = "";
+    const s1 = p.storage_1 ? String(p.storage_1).trim() : "";
+    const s2 = p.storage_2 ? String(p.storage_2).trim() : "";
+
+    if (s1 && s1 !== "-") {
+        if (s2 && s2 !== "-") {
+            storageDisplay = `${s1}<br>${s2}`; // Shift storage_2 to a new line
+        } else {
+            storageDisplay = s1; // Only storage_1 exists
+        }
+    } else if (s2 && s2 !== "-") {
+        storageDisplay = s2; // Fallback if storage_1 is empty but storage_2 has data
+    }
+
+    // Store the data safely directly on the window object memory bank
+    const cardId = `pc-card-${rawCode || Math.random().toString(36).substr(2, 9)}`;
+    window.productDataStore = window.productDataStore || {};
+    window.productDataStore[cardId] = p;
+
+    return `
+        <div class="product-card" data-product-id="${cardId}">
+            <!-- Code item forced cleanly to the top-right corner position -->
+            ${rawCode ? `<span class="product-code-tag">#${rawCode}</span>` : ''}
+
+            <!-- Metadata Headers -->
+            <div class="brand-label">${p.tier || 'System Build'}</div>
+            <h3 class="product-name-premium" style="max-width: 80%;">
+                ${p.name} ${p.version ? `<span style="font-weight: 300; color: #94a3b8; margin-left: 6px; font-size: 0.85em;">${String(p.version).trim()}</span>` : ''}
+            </h3>
+            
+            <!-- Product Showcase Image -->
+            <img src="${p.image || 'https://via.placeholder.com/500'}" class="product-image">
+            
+            <!-- Tech Specification Table Sheet Wrapper -->
+            <div class="specs-header-title">Key Specs</div>
+            
+            <table class="specs-table" style="margin-top: 0; margin-bottom: auto;">
+                ${renderRow('CPU', p.cpu)}
+                ${renderRow('GPU', p.gpu)}
+                ${renderRow('RAM', p.ram)}
+                ${renderRow('Storage', storageDisplay)}
+            </table>
+            
+            <!-- Pricing Layout Segment at the Bottom -->
+            <div class="computer-price-block" style="margin-top: 0px; border-top: 0px solid #f1f5f9; padding-top: 10px;">
+                <!-- Large, Red PC Price Up Top -->
+                ${pcPriceFormatted ? `
+                    <div style="font-size: 1.6rem; font-weight: 800; color: #e94560; line-height: 1.2;">
+                        ${pcPriceFormatted}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function createMonitorCard(p) {
+    const formattedPrice = p.price ? Number(p.price).toLocaleString() : '0';
+    const fallbackImage = 'images/placeholder.jpg';
+    
+    // 💡 1. Define your tag-to-color mapping
+    const getTagStyles = (tag) => {
+        const normalized = tag.toLowerCase().trim();
+        if (normalized === 'home & office') return { bg: '#e0f2fe', text: '#0284c7' }; // Light Blue
+        if (normalized === 'gaming') return { bg: '#ffedd5', text: '#ea580c' };        // Orange
+        if (normalized === 'professional') return { bg: '#f5f3ff', text: '#7c3aed' };  // Violet
+        return { bg: '#f1f5f9', text: '#475569' }; // Default Grey
+    };
+
+    // 💡 2. Parse tags (assuming comma-separated list in Excel)
+    const tags = p.tags ? String(p.tags).split(',').map(t => t.trim()) : [];
+    
+    return `
+        <div class="product-card" style="cursor: default;">
+            <span class="product-code-tag">#${p.code || ''}</span>
+            <div class="brand-label">${p.brand ? String(p.brand).toUpperCase() : 'MONITOR'}</div>
+            <h3 class="product-name-premium">
+                ${p.name || ''} ${p.model ? `<span style="font-weight: 300; color: #94a3b8; margin-left: 6px; font-size: 0.60em;">${String(p.model).trim()}</span>` : ''}
+            </h3>
+            
+            <img src="${p.image || fallbackImage}" class="product-image" onerror="this.src='${fallbackImage}'">
+            
+            <div class="tag-container" style="margin: 10px 0; display: flex; gap: 6px; flex-wrap: wrap;">
+                ${tags.map(t => {
+                    const style = getTagStyles(t);
+                    return `<span style="background-color: ${style.bg}; color: ${style.text}; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">${t}</span>`;
+                }).join('')}
+            </div>
+
+            <div class="specs-header-title">Key Specs</div>
+
+            <table class="specs-table">
+                ${p.resolution ? `<tr><td class="label">Resolution:</td><td>${p.resolution}</td></tr>` : ''}
+                ${p.size ? `<tr><td class="label">Size:</td><td>${p.size}</td></tr>` : ''}
+                ${p.color ? `<tr><td class="label">Color:</td><td>${p.color}</td></tr>` : ''}
+                ${p.interface ? `<tr><td class="label">Interface:</td><td>${p.interface}</td></tr>` : ''}
+                ${p.refresh ? `<tr><td class="label">Refresh:</td><td>${p.refresh}</td></tr>` : ''}
+                ${p.response ? `<tr><td class="label">Response:</td><td>${p.response}</td></tr>` : ''}
+                ${p.panel ? `<tr><td class="label">Panel:</td><td>${p.panel}</td></tr>` : ''}
+            </table>
+            
+            <div class="computer-price-block" style="margin-top: 1px; border-top: 0px solid #f1f5f9; padding-top: 1px;">
+                <div style="font-size: 1.6rem; font-weight: 800; color: #e94560;">MVR ${formattedPrice}</div>
+            </div>
+        </div>
+    `;
+}
+// Global Click Delegation Handler (Listens for clicks on any product card anywhere)
+document.addEventListener('click', function (event) {
+    const card = event.target.closest('.product-card');
+    if (card) {
+        const productId = card.getAttribute('data-product-id');
+        if (productId && window.productDataStore && window.productDataStore[productId]) {
+            openProductModal(window.productDataStore[productId]);
+        }
+    }
+});
+
+function openProductModal(p, category = '') {
+    const modal = document.getElementById('product-modal');
+    if (!modal) {
+        console.error("Could not find an element with id='product-modal' on the HTML page!");
+        return;
+    }
+    const modalBody = modal.querySelector('.modal-body');
+
+    if (typeof p === 'string') {
+        p = window.productDataStore ? window.productDataStore[p] : null;
+    }
+
+    if (!p) {
+        console.error("Product data context was empty or missing!");
+        return;
+    }
+
+    function renderModalRow(label, value) {
+        if (!value || String(value).trim() === "" || String(value).trim() === "-") return "";
+        return `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="font-weight:700; color:#475569; padding:10px 0; width:160px; vertical-align:top;">${label}:</td>
+                <td style="color:#0f172a; padding:10px 0; vertical-align:top;">${value}</td>
+            </tr>`;
+    }
+
+    function formatMVR(priceValue) {
+        const num = parseFloat(priceValue);
+        if (!num || isNaN(num)) return null;
+        return `MVR ${num.toLocaleString()}`;
+    }
+
+    const rawCode = p.code ? String(p.code).replace(/#/g, '').trim() : '';
+    const primaryImg = p.image || 'https://via.placeholder.com/500';
+    
+    let imageGalleryHtml = `<img id="modal-target-view" src="${primaryImg}" class="modal-main-img" style="height: 550px; max-height: 75vh;">`;
+    
+    let imageList = [primaryImg];
+    if (p.additional_images) {
+        const extras = String(p.additional_images).split(',').map(img => img.trim()).filter(img => img !== "");
+        imageList = imageList.concat(extras);
+    }
+
+    if (imageList.length > 1) {
+        imageGalleryHtml += `<div class="modal-thumbnails" style="margin-top: 15px;">`;
+        imageGalleryHtml += imageList.map((img, i) => `
+            <img src="${img}" class="thumb-img ${i === 0 ? 'active' : ''}" onclick="switchModalPhoto(this, '${img}')">
+        `).join('');
+        imageGalleryHtml += `</div>`;
+    }
+
+    const displayPrice = p.price || p.pc_price || ''; 
+    const displayName = p.name || '';
+    const displaySubtitle = p.version || p.model || '';
+    const displayBadge = p.brand ? String(p.brand).toUpperCase() : (p.tier || 'System Build');
+
+    modalBody.innerHTML = `
+        <div class="modal-left-col">
+            ${imageGalleryHtml}
+        </div>
+        
+        <div class="modal-right-col">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span class="modal-tier-badge" style="font-size:0.85rem; font-weight:700; color: currentColor; text-transform:uppercase; letter-spacing:0.5px;">
+                    ${displayBadge}
+                </span>
+                ${rawCode ? `
+                    <span style="font-size: 0.8rem; font-weight: 600; color: #64748b; background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+                        #${rawCode}
+                    </span>` : ''}
+            </div>
+
+            <h2 style="font-size: 1.8rem; font-weight:800; margin: 0 0 15px 0; color:#0f172a; line-height: 1.2;">
+                ${displayName} ${displaySubtitle ? `<span style="font-weight:300; color:#94a3b8; font-size:0.8em; margin-left: 6px;">${displaySubtitle}</span>` : ''}
+            </h2>
+            
+            <div style="background:#f8fafc; padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid #f1f5f9;">
+                ${displayPrice ? `<div style="color:#e94560; font-size:1.6rem; font-weight:800;">Price: ${formatMVR(displayPrice)}</div>` : ''}
+                ${p.full_system_price ? `<div style="color:#64748b; font-size:0.95rem; font-weight:600; margin-top:4px;">Full System: ${formatMVR(p.full_system_price)}</div>` : ''}
+            </div>
+
+            <h4 style="border-bottom:2px solid #f1f5f9; padding-bottom:6px; margin-bottom:10px; color:#0f172a; font-weight: 800; font-size: 1.05rem;">
+                Technical Specifications
+            </h4>
+            
+            <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+                ${renderModalRow('Processor', p.cpu)}
+                ${renderModalRow('CPU Cooler', p.cooler)}
+                ${renderModalRow('Graphics Card', p.gpu)}
+                ${renderModalRow('RAM', p.memory || p.ram)} 
+                ${renderModalRow('Main Storage', p.storage_1 || p.storage)}
+                ${renderModalRow('Extra Storage', p.storage_2)}
+                ${renderModalRow('Motherboard', p.motherboard)}
+                ${renderModalRow('Power Supply', p.power)}
+                ${renderModalRow('Chassis Case', p.case)}
+                
+                ${renderModalRow('Display Screen', p.display || p.size)}
+                ${renderModalRow('Resolution', p.resolution)}
+                ${renderModalRow('Refresh Rate', p.refresh)}
+                ${renderModalRow('Response Time', p.response)}
+                ${renderModalRow('Panel Type', p.panel)}
+                ${renderModalRow('Color', p.color)}
+                ${renderModalRow('Interface', p.interface)}
+                
+                ${renderModalRow('Software Included', p.Software || p.software)}
+                ${renderModalRow('Additional Components', p.Ad_components || p.ad_components)}
+                
+                ${renderModalRow('Includes', p.includes)}
+                ${renderModalRow('Description', p.description)}
+            </table>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function closeModal(e) {
+    const modal = document.getElementById('product-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function switchModalPhoto(thumbElement, imageSrc) {
+    document.getElementById('modal-target-view').src = imageSrc;
+    const lines = thumbElement.parentElement.querySelectorAll('.thumb-img');
+    lines.forEach(el => el.classList.remove('active'));
+    thumbElement.classList.add('active');
+}
+
+// Explicit bindings
+window.closeModal = closeModal;
+window.switchModalPhoto = switchModalPhoto;
+
+function switchModalPhoto(thumbElement, imageSrc) {
+    document.getElementById('modal-target-view').src = imageSrc;
+    // Toggle active classes along thumbnail element boxes
+    const lines = thumbElement.parentElement.querySelectorAll('.thumb-img');
+    lines.forEach(el => el.classList.remove('active'));
+    thumbElement.classList.add('active');
+}
+
+// 2. Monitors Page
+function loadMonitors() {
+    getExcelSheetData('monitors', data => {
+        const container = document.getElementById('product-container');
+        
+        container.innerHTML = data.map(p => {
+            // Pick out the very first tag from your spreadsheet to showcase under the display box
+            const primaryTag = p.tags ? p.tags.split(',')[0].trim() : '';
+            const tagHtml = primaryTag ? `<span class="tag-badge">${primaryTag}</span>` : '';
+            
+            // Generate individual helper list rows if fields contain data
+            function renderRow(label, value) {
+                if (!value || String(value).trim() === "" || String(value).trim() === "-") return "";
+                return `<tr><td class="label">${label}:</td><td>${value}</td></tr>`;
+            }
+
+            const formattedPrice = parseFloat(p.price) ? parseFloat(p.price).toLocaleString() : '0.00';
+
+            return `
+                <div class="product-card">
+                    <div class="card-top-price">${formattedPrice}</div>
+                    
+                    <div class="brand-label">${p.brand || 'Generic'}</div>
+                    <h3 class="product-name-premium">${p.name || 'Display Monitor'} <span style="font-weight:400; font-size:1.1rem; color:#64748b;">${p.model || ''}</span></h3>
+                    
+                    <img src="${p.image || 'https://via.placeholder.com/500'}" class="product-image" style="margin: 10px 0;">
+                    
+                    ${tagHtml}
+                    
+                    <div class="specs-header-title">Key Specs</div>
+                    ${p.code ? `<span class="product-code-tag">#${p.code}</span>` : ''}
+                    
+                    <table class="specs-table" style="margin-top: 0;">
+                        ${renderRow('Resolution', p.resolution)}
+                        ${renderRow('Size', p.size)}
+                        ${renderRow('Color', p.color)}
+                        ${renderRow('Interface', p.interface)}
+                    </table>
+                </div>
+            `;
+        }).join('');
+    });
+}
+
+// 3. Laptops Page
+function loadLaptops() {
+    getExcelSheetData('laptops', data => {
+        const container = document.getElementById('product-container');
+        container.innerHTML = data.map(p => {
+            const isTouch = String(p.touchscreen).toLowerCase() === 'true';
+            const touchBadge = isTouch ? `<div class="touch-icon">👉 Touchscreen Enabled</div>` : '';
+            return `
+                <div class="product-card">
+                    <img src="${p.image || 'https://via.placeholder.com/500'}" class="product-image">
+                    <div class="product-info">
+                        <span style="font-size:0.8rem; color:#888;">Code: ${p.code || 'N/A'} | ${p.brand || ''} ${p.model || ''}</span>
+                        <h3 class="product-name">${p.name}</h3>
+                        <p class="product-desc">${p.description || ''}</p>
+                        ${touchBadge}
+                        <table class="specs-table">
+                            <tr><td class="label">Size</td><td>${p.size || '-'}</td></tr>
+                            <tr><td class="label">CPU</td><td>${p.cpu || '-'}</td></tr>
+                            <tr><td class="label">GPU</td><td>${p.gpu || '-'}</td></tr>
+                            <tr><td class="label">Memory</td><td>${p.memory || '-'}</td></tr>
+                            <tr><td class="label">Display</td><td>${p.display || '-'}</td></tr>
+                        </table>
+                        <div class="product-meta">
+                            <span class="product-price">$${parseFloat(p.price).toFixed(2)}</span>
+                            <button class="btn-buy">Buy Laptop</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    });
+}
+
+// 4. Tablets Page
+function loadTablets() {
+    getExcelSheetData('tablets', data => {
+        const container = document.getElementById('product-container');
+        container.innerHTML = data.map(p => `
+            <div class="product-card">
+                <img src="${p.image || 'https://via.placeholder.com/500'}" class="product-image">
+                <div class="product-info">
+                    <span style="font-size:0.8rem; color:#888;">Code: ${p.code || 'N/A'} | ${p.brand || ''}</span>
+                    <h3 class="product-name">${p.name}</h3>
+                    <table class="specs-table">
+                        <tr><td class="label">Size</td><td>${p.size || '-'}</td></tr>
+                        <tr><td class="label">Processor</td><td>${p.cpu || '-'}</td></tr>
+                        <tr><td class="label">Memory</td><td>${p.memory || '-'}</td></tr>
+                        <tr><td class="label">Storage</td><td>${p.storage || '-'}</td></tr>
+                        <tr><td class="label">Camera</td><td>${p.camera || '-'}</td></tr>
+                        <tr><td class="label">Battery</td><td>${p.battery || '-'}</td></tr>
+                        <tr><td class="label">Includes</td><td>${p.includes || 'Tablet Only'}</td></tr>
+                    </table>
+                    <div class="product-meta">
+                        <span class="product-price">$${parseFloat(p.price).toFixed(2)}</span>
+                        <button class="btn-buy">Buy Tablet</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+// 5. Generic Peripherals / Products Page
+function loadProducts() {
+    getExcelSheetData('products', data => {
+        const container = document.getElementById('product-container');
+        container.innerHTML = data.map(p => `
+            <div class="product-card">
+                <img src="${p.image || 'https://via.placeholder.com/500'}" class="product-image">
+                <div class="product-info">
+                    <span style="font-size:0.8rem; color:#888;">Code: ${p.code || 'N/A'}</span>
+                    <h3 class="product-name">${p.name}</h3>
+                    <p class="product-desc" style="margin-bottom:8px;"><strong>Details:</strong> ${p.details || '-'}</p>
+                    <p class="product-desc" style="font-style: italic; color: #555;"><strong>Options:</strong> ${p.variables || '-'}</p>
+                    <div class="product-meta" style="margin-top:auto;">
+                        <span class="product-price">$${parseFloat(p.price).toFixed(2)}</span>
+                        <button class="btn-buy">Add to Cart</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+function loadTieredComputers(categoryName) {
+    // getExcelSheetData now automatically filters out unavailable products
+    getExcelSheetData(categoryName, data => {
+        const mainContainer = document.getElementById('tiered-container');
+        
+        // After filtering in getExcelSheetData, 'data' only contains 'true' items.
+        if (!data || data.length === 0) {
+            mainContainer.innerHTML = `<p style="text-align:center; padding: 20px; color: red;">No available products found in the "${categoryName}" category.</p>`;
+            return;
+        }
+
+        const currentCategory = categoryName.trim().toLowerCase();
+
+        // -------------------------------------------------------------
+        // CASE A: MONITORS PAGE
+        // -------------------------------------------------------------
+        if (currentCategory === 'monitors') {
+            mainContainer.innerHTML = `
+                <div class="tier-section" style="margin-top: 30px; margin-bottom: 25px;">
+                    <h2 class="specs-header-title" style="font-size: 1.75rem; padding-left: 10px;">Available Monitors</h2>
+                </div>
+                <div class="monitor-grid-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; padding: 10px; max-width: 1200px; margin: 0 auto;">
+                    ${data.map(p => createMonitorCard(p)).join('')}
+                </div>
+            `;
+            return;
+        }
+
+        // -------------------------------------------------------------
+        // CASE B: HARDWARE SECTIONS (Grouped by Tier)
+        // -------------------------------------------------------------
+        const cleanedData = data.map(item => ({
+            ...item,
+            tier: item.tier ? String(item.tier).trim().toLowerCase() : '',
+            originalTier: item.tier ? String(item.tier).trim() : 'Products'
+        }));
+
+        let targetTiers = [];
+        if (currentCategory === 'aspect') {
+            targetTiers = [{display: "Aspect Lite", search: "aspect lite"}, {display: "Aspect", search: "aspect"}, {display: "Aspect Pro", search: "aspect pro"}];
+        } else if (currentCategory === 'gaming') {
+            targetTiers = [{display: "REXX", search: "rexx"}, {display: "Alder", search: "alder"}, {display: "Reaper", search: "reaper"}, {display: "Dominator", search: "dominator"}, {display: "Ultra", search: "ultra"}];
+        } else if (currentCategory === 'workstation') {
+            targetTiers = [{display: "Graphics", search: "graphics"}, {display: "Content Creator", search: "content creator"}, {display: "3D", search: "3d"}];
+        } else if (currentCategory === 'laptops') {
+            targetTiers = [{display: "Student Laptops", search: "student"}, {display: "Business Laptops", search: "business"}, {display: "Gaming Laptops", search: "gaming"}, {display: "MacBooks", search: "macbook"}];
+        } else if (currentCategory === 'tablets') {
+            mainContainer.innerHTML = `<div class="product-grid-4col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">${data.map(p => createTabletCard(p)).join('')}</div>`;
+            return;
+        }
+
+        let finalHtml = '';
+        let matchedAnyTier = false;
+
+        // Render based on target tiers
+        if (targetTiers.length > 0) {
+            targetTiers.forEach(tier => {
+                const tierProducts = cleanedData.filter(p => p.tier === tier.search);
+                if (tierProducts.length > 0) {
+                    matchedAnyTier = true;
+                    finalHtml += `
+                        <div class="tier-section" style="margin-top: 30px; margin-bottom: 15px;">
+                            <h2 class="specs-header-title" style="font-size: 1.75rem; padding-left: 10px;">${tier.display}</h2>
+                        </div>
+                        <div class="product-grid-4col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                            ${tierProducts.map(p => {
+                                if (currentCategory === 'laptops') return createLaptopCard(p);
+                                if (currentCategory === 'tablets') return createTabletCard(p);
+                                return createComputerCard(p);
+                            }).join('')}
+                        </div>`;
+                }
+            });
+        }
+
+        // Dynamic grouping for non-standard tiers
+        if (!matchedAnyTier) {
+            const dynamicGroups = {};
+            cleanedData.forEach(p => {
+                if (!dynamicGroups[p.originalTier]) dynamicGroups[p.originalTier] = [];
+                dynamicGroups[p.originalTier].push(p);
+            });
+            Object.keys(dynamicGroups).forEach(tierName => {
+                finalHtml += `
+                    <div class="tier-section" style="margin-top: 30px; margin-bottom: 15px;">
+                        <h2 class="specs-header-title" style="font-size: 1.75rem; padding-left: 10px;">${tierName}</h2>
+                    </div>
+                    <div class="product-grid-4col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                        ${dynamicGroups[tierName].map(p => {
+                            if (currentCategory === 'laptops') return createLaptopCard(p);
+                            return createComputerCard(p);
+                        }).join('')}
+                    </div>`;
+            });
+        }
+
+        mainContainer.innerHTML = finalHtml;
+    });
+}
+
+function createLaptopCard(p) {
+    const formattedPrice = p.price ? Number(p.price).toLocaleString() : '0';
+    const fallbackImage = 'images/placeholder.jpg';
+    const rawCode = p.code ? String(p.code).replace(/#/g, '').trim() : '';
+    
+    const cardId = `laptop-card-${rawCode || Math.random().toString(36).substr(2, 9)}`;
+    window.productDataStore = window.productDataStore || {};
+    window.productDataStore[cardId] = p;
+    
+    return `
+        <div class="product-card" data-product-id="${cardId}" onclick="openProductModal('${cardId}', 'laptops')">
+            ${rawCode ? `<span class="product-code-tag">#${rawCode}</span>` : ''}
+            <div class="brand-label">${p.brand ? String(p.brand).toUpperCase() : 'LAPTOP'}</div>
+            
+            <h3 class="product-name-premium" style="max-width: 80%;">
+                ${p.name || ''} ${p.model ? `<span style="font-weight: 300; color: #94a3b8; margin-left: 6px; font-size: 0.60em;">${String(p.model).trim()}</span>` : ''}
+            </h3>
+            
+            <img src="${p.image || fallbackImage}" class="product-image" alt="${p.name || 'Laptop'}" onerror="this.src='${fallbackImage}'">
+            
+            <div class="specs-header-title">Key Specs</div>
+            
+            <table class="specs-table" style="margin-top: 0; margin-bottom: auto;">
+                <tr><td class="label">CPU:</td><td>${p.cpu || 'N/A'}</td></tr>
+                <tr><td class="label">GPU:</td><td>${p.gpu || 'N/A'}</td></tr>
+                <tr><td class="label">RAM:</td><td>${p.memory || p.ram || 'N/A'}</td></tr>
+                <tr><td class="label">Display:</td><td>${p.display || 'N/A'}</td></tr>
+                <tr><td class="label">Storage:</td><td>${p.storage_1 || p.storage || 'N/A'}</td></tr>
+            </table>
+            
+            <div class="computer-price-block" style="margin-top: 0px; border-top: 0px solid #f1f5f9; padding-top: 10px;">
+                <div style="font-size: 1.6rem; font-weight: 800; color: #e94560; line-height: 1.2;">
+                    MVR ${formattedPrice}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function createTabletCard(p) {
+    const formattedPrice = p.price ? Number(p.price).toLocaleString() : '0';
+    const fallbackImage = 'images/placeholder.jpg';
+    const rawCode = p.code ? String(p.code).replace(/#/g, '').trim() : '';
+    
+    return `
+        <div class="product-card" style="display: flex; flex-direction: column; height: 100%; position: relative;">
+            ${rawCode ? `<span class="product-code-tag">#${rawCode}</span>` : ''}
+            
+            <div class="brand-label">${p.brand ? String(p.brand).toUpperCase() : 'TABLET'}</div>
+            <h3 class="product-name-premium">
+                ${p.name || ''} ${p.model ? `<span style="font-weight: 300; color: #94a3b8; margin-left: 6px; font-size: 0.60em;">${String(p.model).trim()}</span>` : ''}
+            </h3>
+            <img src="${p.image || fallbackImage}" class="product-image" onerror="this.src='${fallbackImage}'" style="margin: 15px 0;">
+            
+            <div class="specs-header-title">Specifications</div>
+            <table class="specs-table" style="width: 100%; font-size: 0.85rem;">
+                ${p.size ? `<tr><td class="label">Display:</td><td>${p.size}</td></tr>` : ''}
+                ${p.memory ? `<tr><td class="label">RAM:</td><td>${p.memory}</td></tr>` : ''}
+                ${p.storage ? `<tr><td class="label">Storage:</td><td>${p.storage}</td></tr>` : ''}
+                ${p.camera ? `<tr><td class="label">Camera:</td><td>${p.camera}</td></tr>` : ''}
+                ${p.battery ? `<tr><td class="label">Battery:</td><td>${p.battery}</td></tr>` : ''}
+                ${p.includes ? `<tr><td class="label">Includes:</td><td>${p.includes}</td></tr>` : ''}
+            </table>
+            
+            <div class="computer-price-block" style="margin-top: auto; border-top: 1px solid #f1f5f9; padding-top: 15px; margin-top: 15px;">
+                <div style="font-size: 1.6rem; font-weight: 800; color: #e94560;">MVR ${formattedPrice}</div>
+            </div>
+        </div>
+    `;
+}
+
+function takeLongScreenshot(event) {
+    const element = document.getElementById('tiered-container') || document.getElementById('product-container') || document.body;
+    
+    const btn = event ? event.target : null;
+    const originalText = btn ? btn.innerText : '';
+    if (btn) btn.innerText = "📸 Snapping Screenshot...";
+
+    const options = {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        scrollY: -window.scrollY,
+        onclone: (clonedDoc) => {
+            const images = clonedDoc.querySelectorAll('.product-image');
+            images.forEach(img => {
+                // 1. Create a container for the background image
+                const wrapper = document.createElement('div');
+                
+                // 2. Apply styles to ensure it behaves like 'object-fit: contain'
+                wrapper.style.width = '100%';
+                wrapper.style.height = '200px';
+                wrapper.style.backgroundImage = `url(${img.src})`;
+                wrapper.style.backgroundSize = 'contain';
+                wrapper.style.backgroundRepeat = 'no-repeat';
+                wrapper.style.backgroundPosition = 'center';
+                wrapper.style.backgroundColor = '#ffffff';
+
+                // 3. Swap the original image for our new background-image container
+                img.parentNode.replaceChild(wrapper, img);
+            });
+        }
+    };
+
+    html2canvas(element, options).then(canvas => {
+        const imageData = canvas.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.download = `Gizmo-Shop-Products-${new Date().toISOString().slice(0,10)}.png`;
+        link.href = imageData;
+        link.click();
+        
+        if (btn) btn.innerText = originalText;
+    }).catch(err => {
+        console.error("Screenshot Error:", err);
+        alert("Failed to capture screenshot.");
+        if (btn) btn.innerText = originalText;
+    });
+}
+
+function applyFilters() {
+    // 1. Get values from ALL filters
+    const maxSlider = document.getElementById('max-price-slider');
+    const trackFill = document.getElementById('slider-track-fill');
+    
+    // Read the true/false state of the checkboxes
+    const showIntel = document.getElementById('cpu-intel').checked;
+    const showAmd = document.getElementById('cpu-amd').checked;
+    
+    let maxVal = parseInt(maxSlider.value);
+    
+    // 2. Update the Slider UI
+    document.getElementById('max-price-display').innerText = maxVal.toLocaleString();
+    const percent = (maxVal / maxSlider.max) * 100;
+    trackFill.style.width = percent + "%";
+
+    // 3. Loop through all cards and apply rules
+    const cards = document.querySelectorAll('.product-card');
+    cards.forEach(card => {
+        const cardId = card.getAttribute('data-product-id');
+        const productData = window.productDataStore ? window.productDataStore[cardId] : null;
+        
+        if (!productData) {
+            card.style.display = '';
+            return;
+        }
+
+        // --- Rule A: Check Price ---
+        const rawPrice = parseFloat(productData.pc_price || productData.price || 0);
+        const passesPrice = rawPrice <= maxVal;
+
+        // --- Rule B: Check CPU Checkboxes ---
+        const cpuText = String(productData.cpu || '').toLowerCase();
+        let passesCpu = false; 
+        
+        if (showIntel && showAmd) {
+            // Both checked = show everything
+            passesCpu = true; 
+        } else if (showIntel && !showAmd) {
+            // Only Intel checked
+            passesCpu = cpuText.includes('intel');
+        } else if (!showIntel && showAmd) {
+            // Only AMD checked (checks for 'amd' or 'ryzen')
+            passesCpu = cpuText.includes('amd') || cpuText.includes('ryzen');
+        } else {
+            // Neither checked = hide everything
+            passesCpu = false;
+        }
+
+        // --- Final Decision ---
+        if (passesPrice && passesCpu) {
+            card.style.display = ''; 
+        } else {
+            card.style.display = 'none'; 
+        }
+    });
+
+    // 4. Hide completely empty tier categories
+    const tierSections = document.querySelectorAll('.tier-section');
+    tierSections.forEach(header => {
+        const grid = header.nextElementSibling;
+        if (grid && (grid.classList.contains('product-grid-4col') || grid.classList.contains('monitor-grid-container'))) {
+            const visibleCards = Array.from(grid.querySelectorAll('.product-card')).filter(c => c.style.display !== 'none');
+            header.style.display = visibleCards.length === 0 ? 'none' : '';
+        }
+    });
+}
+
+// Render UI cleanly on initial load
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => applyFilters(), 200); 
+});
+

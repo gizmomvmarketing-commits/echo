@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizmo Shop - Aspect Computers</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Accent overrides for Aspect Page */
+        :root {
+            --accent-color: #1d9dd8;
+        }
+        
+        .tier-title,
+        #tiered-container .specs-header-title {
+            color: #1d9dd8 !important;
+            border-left-color: #1d9dd8 !important;
+        }
+        
+        #tiered-container .brand-label {
+            color: #1d9dd8 !important;
+        }
+        
+        #tiered-container .computer-price-block div,
+        #tiered-container .computer-price-block span {
+            color: #e94560 !important;
+        }
+        
+        .modal-tier-badge { 
+            color: #1d9dd8 !important; 
+        }
+
+        /* Control Panel Styles */
+        #control-panel {
+            display: none;
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            z-index: 9998;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 300px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .custom-range-slider {
+            position: absolute;
+            width: 100%;
+            -webkit-appearance: none;
+            background: transparent;
+            z-index: 3;
+            height: 6px;
+            top: 0;
+            left: 0;
+            margin: 0;
+        }
+        .custom-range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #e94560;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            margin-top: -7px;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">GIZMO SHOP</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="aspect.html" class="active">Aspect</a>
+            <a href="gaming.html">Gaming</a>
+            <a href="workstation.html">Workstation</a>
+            <a href="monitors.html">Monitors</a>
+            <a href="laptops.html">Laptops</a>
+            <a href="tablets.html">Tablets</a>
+            <a href="products.html">Other Products</a>
+        </div>
+    </nav>
+
+    <button id="fab-trigger" onclick="toggleControlPanel()" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; padding: 15px; border-radius: 50%; background: #e94560; color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);">
+        ⚙️
+    </button>
+
+    <div id="control-panel">
+        <label style="font-weight: 800; display: block; margin-bottom: 5px;">Max Price (MVR <span id="max-price-display">100,000</span>)</label>
+        <div class="slider-track-container" style="position: relative; height: 6px; background: #cbd5e1; border-radius: 5px; margin-bottom: 25px;">
+            <div id="slider-track-fill" style="position: absolute; height: 100%; background: #e94560; z-index: 1; border-radius: 5px; left: 0; width: 100%;"></div>
+            <input type="range" id="max-price-slider" min="0" max="100000" value="100000" step="1000" oninput="applyFilters()" class="custom-range-slider">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="margin-right:10px;"><input type="checkbox" id="cpu-intel" onchange="applyFilters()" checked> Intel</label>
+            <label><input type="checkbox" id="cpu-amd" onchange="applyFilters()" checked> AMD / Ryzen</label>
+        </div>
+
+        <button onclick="takeLongScreenshot(event)" style="width: 100%; padding: 10px; background: #e94560; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            📸 Download Screenshot
+        </button>
+    </div>
+
+    <main id="tiered-container" style="padding-top: 20px;"></main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="loader.js"></script>
+    
+    <script>
+        loadTieredComputers("aspect");
+
+        function toggleControlPanel() {
+            const panel = document.getElementById('control-panel');
+            const trigger = document.getElementById('fab-trigger');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'block';
+                trigger.innerText = '✖️';
+            } else {
+                panel.style.display = 'none';
+                trigger.innerText = '⚙️';
+            }
+        }
+    </script>
+
+    <div id="product-modal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeModal(event)">&times;</button>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+</body>
+</html>
