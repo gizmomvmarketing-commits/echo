@@ -346,6 +346,7 @@ function openProductModal(p, category = '') {
                 ${renderModalRow('CPU Cooler', p.cooler)}
                 ${renderModalRow('Graphics Card', p.gpu)}
                 ${renderModalRow('RAM', p.memory || p.ram)} 
+                ${renderModalRow('Extra RAM', p.ram_2)} 
                 ${renderModalRow('Main Storage', p.storage_1 || p.storage)}
                 ${renderModalRow('Extra Storage', p.storage_2)}
                 ${renderModalRow('Motherboard', p.motherboard)}
