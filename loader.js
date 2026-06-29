@@ -1,3 +1,53 @@
+function loadNavbar() {
+    fetch('navbar.html')
+        .then(response => {
+            if (!response.ok) throw new Error('Navbar file could not be found.');
+            return response.text();
+        })
+        .then(data => {
+            const placeholder = document.getElementById('navbar-placeholder');
+            if (placeholder) {
+                placeholder.innerHTML = data;
+                setActiveNavLink(); // Runs safely after the menu is injected
+            }
+        })
+        .catch(error => console.error('Error fetching the navbar:', error));
+}
+
+// Fire the loader automatically as soon as the DOM finishes building
+document.addEventListener('DOMContentLoaded', loadNavbar);
+
+document.addEventListener('DOMContentLoaded', loadNavbar);
+
+function setActiveNavLink() {
+    // Get the current page URL (e.g., "laptops.html")
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    
+    // Find all links inside the navbar
+    const navLinks = document.querySelectorAll('.nav-links a');
+    
+    // Loop through them and add the active class to the matching one
+    navLinks.forEach(link => {
+        // Get the link's destination (e.g., "laptops.html")
+        const linkPath = link.getAttribute('href');
+        
+        if (linkPath === currentPage) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+}
+
+function toggleMenu() {
+    const navLinks = document.getElementById('navLinks');
+    // Alternates the class presence to show or hide the menu items
+    navLinks.classList.toggle('mobile-open');
+}
+
+// Run the function as soon as the page loads
+document.addEventListener('DOMContentLoaded', loadNavbar);
+
 // Helper function to check if a row is available
 function isProductAvailable(row) {
     const val = String(row.available || '').toLowerCase().trim();
