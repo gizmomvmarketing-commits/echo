@@ -495,7 +495,7 @@ function loadTieredComputers(categoryName) {
                 <div class="tier-section" style="margin-top: 30px; margin-bottom: 25px;">
                     <h2 class="specs-header-title" style="font-size: 1.75rem; padding-left: 10px;">Available Monitors</h2>
                 </div>
-                <div class="monitor-grid-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; padding: 10px; max-width: 1200px; margin: 0 auto;">
+                <div class="product-grid-4col">
                     ${data.map(p => createMonitorCard(p)).join('')}
                 </div>
             `;
@@ -521,7 +521,8 @@ function loadTieredComputers(categoryName) {
         } else if (currentCategory === 'laptops') {
             targetTiers = [{display: "Student Laptops", search: "student"}, {display: "Business Laptops", search: "business"}, {display: "Gaming Laptops", search: "gaming"}, {display: "MacBooks", search: "macbook"}];
         } else if (currentCategory === 'tablets') {
-            mainContainer.innerHTML = `<div class="product-grid-4col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">${data.map(p => createTabletCard(p)).join('')}</div>`;
+            // REMOVED INLINE GRID STYLES
+            mainContainer.innerHTML = `<div class="product-grid-4col">${data.map(p => createTabletCard(p)).join('')}</div>`;
             return;
         }
 
@@ -538,7 +539,7 @@ function loadTieredComputers(categoryName) {
                         <div class="tier-section" style="margin-top: 30px; margin-bottom: 15px;">
                             <h2 class="specs-header-title" style="font-size: 1.75rem; padding-left: 10px;">${tier.display}</h2>
                         </div>
-                        <div class="product-grid-4col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                        <div class="product-grid-4col">
                             ${tierProducts.map(p => {
                                 if (currentCategory === 'laptops') return createLaptopCard(p);
                                 if (currentCategory === 'tablets') return createTabletCard(p);
@@ -561,7 +562,7 @@ function loadTieredComputers(categoryName) {
                     <div class="tier-section" style="margin-top: 30px; margin-bottom: 15px;">
                         <h2 class="specs-header-title" style="font-size: 1.75rem; padding-left: 10px;">${tierName}</h2>
                     </div>
-                    <div class="product-grid-4col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                    <div class="product-grid-4col">
                         ${dynamicGroups[tierName].map(p => {
                             if (currentCategory === 'laptops') return createLaptopCard(p);
                             return createComputerCard(p);
