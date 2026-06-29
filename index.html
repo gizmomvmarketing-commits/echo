@@ -5,22 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gizmo Shop - Home</title>
     <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
     <nav>
-        <div class="logo">GIZMO SHOP</div>
-        <div class="nav-links">
-            <a href="index.html" class="active">Home</a>
-            <a href="aspect.html">Aspect</a>
-            <a href="gaming.html">Gaming</a>
-            <a href="workstation.html">Workstation</a>
-            <a href="monitors.html">Monitors</a>
-            <a href="laptops.html">Laptops</a>
-            <a href="tablets.html">Tablets</a>
-            <a href="products.html">Other Products</a>
-        </div>
+    <div class="logo">GIZMO SHOP</div>
+    
+    <button class="menu-toggle" aria-label="Toggle navigation" onclick="toggleMenu()">
+        ☰
+    </button>
+    
+    <div class="nav-links" id="navLinks">
+        <a href="index.html">Home</a>
+        <a href="aspect.html">Aspect</a>
+        <a href="gaming.html">Gaming</a>
+        <a href="workstation.html">Workstation</a>
+        <a href="monitors.html">Monitors</a>
+        <a href="laptops.html">Laptops</a>
+        <a href="tablets.html">Tablets</a>
+        <a href="other.html">Other Products</a>
+    </div>
     </nav>
 
     <header class="premium-hero">
@@ -91,7 +97,15 @@
     </footer>
 
     <script>
-        // Initializes the clean utility icons
+        // 🌟 THIS IS THE FIX: Explicitly define the toggle function here
+        function toggleMenu() {
+            const navLinks = document.getElementById('navLinks');
+            if (navLinks) {
+                navLinks.classList.toggle('mobile-open');
+            }
+        }
+
+        // Initializes your clean utility icons
         lucide.createIcons();
     </script>
 </body>
