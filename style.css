@@ -265,8 +265,11 @@ body {
 
 .category-showcase-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    width: 90%;            /* Allows it to be fluid */
+    max-width: 1200px;     /* Prevents it from getting too wide on desktop */
+    margin: 0 auto;        /* Centers the grid */
 }
 
 .category-card-premium {
@@ -416,38 +419,36 @@ nav {
     font-weight: 600;
     border-bottom: 2px solid #1d4ed8; /* Premium underline effect */
 }
-/* 4-Column Responsive Product Grid */
+/* Container: Uses a mobile-first approach */
 .product-grid-4col {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Forces exactly 4 columns per row */
-    gap: 24px;
-    padding: 0 20px 50px 20px;
+    /* 1. Start with 1 column on mobile */
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px;
     max-width: 1200px;
     margin: 0 auto;
 }
 
-/* Fallback adjustments for smaller screens / tablets */
-@media (max-width: 1024px) {
+/* 2. As soon as there is space (tablets/laptops), move to 2, then 3 */
+@media (min-width: 600px) {
     .product-grid-4col {
         grid-template-columns: repeat(2, 1fr);
     }
 }
-@media (max-width: 600px) {
+
+@media (min-width: 1024px) {
     .product-grid-4col {
-        grid-template-columns: 1fr;
+        /* Max 3 cards per row */
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
-/* Premium Card Overwrite to match index page style profile */
+/* Ensure the cards themselves don't have conflicting fixed widths */
 .product-card {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px; /* Soft rounding matching category cards */
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: none;
+    width: 100%; /* Important: This prevents cards from shrinking */
+    max-width: none;
+    box-sizing: border-box;
 }
 
 .product-card:hover {
@@ -689,3 +690,63 @@ nav {
         left: 0; /* 🌟 THIS IS THE FIX: Anchors the slider to the left edge */
         margin: 0;
     }
+
+/* Mobile Optimization */
+@media (max-width: 600px) {
+    .product-grid-4col {
+        grid-template-columns: 1fr; /* Force 1 column on mobile */
+        padding: 10px;
+    }
+}
+
+/* --- Desktop Navigation Styles (Unchanged / Cleaned up) --- */
+nav {
+    background-color: #ffffff;
+    padding: 20px 40px;
+    display: flex; /* 👈 Force it to display */
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+    z-index: 1000;
+}
+
+.menu-toggle {
+    display: none; /* Hidden on Desktop */
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #0f172a;
+}
+
+/* --- Mobile Responsive Drop-down Setup --- */
+@media (max-width: 768px) {
+    .menu-toggle {
+        display: block; /* Show hamburger button on mobile */
+    }
+
+    .nav-links {
+        display: none; /* Hide standard links layout by default */
+        flex-direction: column;
+        position: absolute;
+        top: 100%; /* Sits exactly below the navbar frame */
+        left: 0;
+        width: 100%;
+        background-color: #ffffff;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 20px;
+        gap: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Class added via JavaScript when burger icon is clicked */
+    .nav-links.mobile-open {
+        display: flex; 
+    }
+    
+    .nav-links a {
+        width: 100%;
+        padding: 10px 0;
+    }
+}
